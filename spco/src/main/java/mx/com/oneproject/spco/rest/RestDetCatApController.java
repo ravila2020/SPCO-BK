@@ -25,7 +25,7 @@ import mx.com.oneproject.spco.modelo.DetCatAp;
 import mx.com.oneproject.spco.repositorio.IMDetCatApRepo;
 import mx.com.oneproject.spco.result.AnsDetCatAp;
 
-//@CrossOrigin(origins = "http://localhost:4200" , maxAge = 3600)
+@CrossOrigin(origins = "http://localhost:4200" , maxAge = 3600)
 @RestController
 @RequestMapping("/DetCatAp")
 public class RestDetCatApController {
