@@ -1,11 +1,12 @@
 package mx.com.oneproject.spco.rest;
 
-//hola
+
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,11 +22,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Jwts;
 import mx.com.oneproject.spco.exception.ApiRequestException;
 import mx.com.oneproject.spco.log.logRegistra;
+import mx.com.oneproject.spco.modelo.CatApendices;
 import mx.com.oneproject.spco.modelo.DetCatAp;
 import mx.com.oneproject.spco.repositorio.IMDetCatApRepo;
+import mx.com.oneproject.spco.respuesta.ApendPag;
+import mx.com.oneproject.spco.result.AnsApenPagList;
 import mx.com.oneproject.spco.result.AnsDetCatAp;
 
-@CrossOrigin(origins = "http://localhost:4200" , maxAge = 3600)
+@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600)
 @RestController
 @RequestMapping("/DetCatAp")
 public class RestDetCatApController {
@@ -35,7 +39,7 @@ public class RestDetCatApController {
 
 	@Autowired
 	private logRegistra registrar;
-	
+	//modificacion github desktop
 	// Consulta de lista de catálogos
 	@GetMapping
 	public AnsDetCatAp listar(HttpServletRequest peticion) {
@@ -276,4 +280,80 @@ public class RestDetCatApController {
 	    		respuesta.setDescripcion("Registro con incidencia");
 	    		return respuesta;}
 			}	
+    
+    
+	// Consulta de apendices con paginacion y validacion de token.
+    @GetMapping(path = {"/pag"})
+    public AnsApenPagList listarPag(@RequestParam(required = false, value = "page") int page,
+    		                    @RequestParam(required = false, value = "perpage") int perPage, 
+    		                    @RequestParam(required = false, value = "clvap") String claveClvap,
+    		                    HttpServletRequest peticion) {
+    	
+    	AnsApenPagList respuesta = new AnsApenPagList();
+    	String token = peticion.getHeader("Authorization");
+		System.out.print("\n\n + RestDetCatApController token: " + token + "\n ");
+		if (token != null) {
+			String user = Jwts.parser()
+					.setSigningKey("0neProj3ct")
+					.parseClaimsJws(token.replace("Bearer",  ""))
+					.getBody()
+					.getSubject();
+			System.out.print("\n\n + RestDetCatApController Usuario: " + user + "\n ");
+		}	else	{
+			respuesta.setCr("99");
+			respuesta.setDescripcion("Petición sin token");		
+			return respuesta;
+			}
+		boolean enabled = true;
+		DetCatAp apendiceCero = new DetCatAp();
+		Long todos = (long) 0;
+		double paginas = (float) 0.0;
+		Integer pagEntero = 0;
+		List<DetCatAp> todosApendices;
+		List<DetCatAp> paginaApendices; 
+		Integer ApendiceInicial, ApendiceFinal;
+		
+		ApendPag resultado = new ApendPag();
+    	
+    	System.out.print(" + RestDetCatApController listarPag page: " + page + " perpage: " + perPage +"\n ");
+
+    	// obtener el total.
+         todos = RepoDetCatAp.countByActivos(claveClvap);
+         paginas = (double) todos / perPage;
+         pagEntero = (int) paginas;
+         if ((paginas-pagEntero)>0)
+         {
+        	 pagEntero++;
+         }
+         // Obtener la lista solicitada
+         ApendiceInicial = (perPage  * (page - 1) );
+         ApendiceFinal   = (ApendiceInicial + perPage) - 1;
+         todosApendices  = RepoDetCatAp.findByClave(claveClvap);
+         paginaApendices = RepoDetCatAp.findByClave(claveClvap);
+         paginaApendices.clear();
+         for (int i=0; i<todos;i++) {
+        	 System.out.print("\n " + "          + RestDetCatApController Apendice: " + i + " - " + todosApendices.get(i).getDesCorta() );
+        	 if(i>=ApendiceInicial && i<=ApendiceFinal)
+        	 {
+        		 apendiceCero = todosApendices.get(i);
+        		 paginaApendices.add(apendiceCero);
+        		 System.out.print("  -- En lista  --" + apendiceCero.getDesCorta() );
+        	 }
+         }
+         
+         
+     	System.out.print("\n + RestDetCatApController listarPag todos: " + todos + " paginas: " + paginas + "  " + (paginas-pagEntero ) +"\n ");
+         //
+         resultado.setPage(page);
+         resultado.setPerPage(perPage);
+         resultado.setTotal((int) RepoDetCatAp.countByActivos(claveClvap));
+         resultado.setTotalPages(pagEntero);
+         resultado.setApendices(paginaApendices);
+
+	 	 respuesta.setContenido(resultado);
+		 respuesta.setCr("00");
+		 respuesta.setDescripcion("Correcto");
+         return respuesta;
+    }
+
 }
